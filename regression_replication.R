@@ -1,6 +1,8 @@
 library(haven)
 library(janitor)
+library(dplyr)
 
+# ----- Pulling in *only* 2017-2018 NHANES data for proof of concept ------
 raw_demographics_data <- read_xpt("/home/mcoots/harvard/research/race-in-healthcare/data/DEMO_J.XPT") %>%
   clean_names()
 
@@ -13,15 +15,10 @@ raw_body_measurements <- read_xpt("/home/mcoots/harvard/research/race-in-healthc
 raw_glycohemoglobin <- read_xpt("/home/mcoots/harvard/research/race-in-healthcare/data/GHB_J.XPT") %>%
   clean_names() 
 
-library(tidyverse)
-
 # Ignoring weights for the first stab at the regression replication
-
 cleaned_demographics_data <- raw_demographics_data %>%
   select(seqn,
          ridageyr,
-         riagendr,
-         ridreth1,
          ridreth3)
 
 cleaned_survey_responses_data <- raw_survey_responses %>%
@@ -33,10 +30,57 @@ cleaned_body_measurements <- raw_body_measurements %>%
          bmxbmi)
 
 cleaned_glycohemoglobin <- raw_glycohemoglobin %>%
-  mutate(above_6.5 = lbxgh >= 6.5)
+  mutate(high_gh = lbxgh >= 6.5)
 
 regression_data <- cleaned_demographics_data %>%
   inner_join(cleaned_survey_responses_data, by = c("seqn")) %>%
   inner_join(cleaned_body_measurements, by = c("seqn")) %>%
-  inner_join(cleaned_glycohemoglobin, by = c("seqn")) %>% 
-  mutate(has_diabetes = (diq010 == 1) | above_6.5) # need to be careful--dont want to drop folks with NA for above_6.5 if dr. told them they had diabetes
+  inner_join(cleaned_glycohemoglobin, by = c("seqn")) %>%
+  # don't want to drop ppl with NA for high_gh if dr. told them they had diabetes
+  # From the paper: Individuals with missing BMI data (1.2% of our study cohort) 
+  # or hemoglobin A1c values (4.7% of our study cohort) were excluded.
+  # so we might need to undo this depending on what the authors' code looks like 
+  mutate(high_gh_no_NA = if_else(is.na(high_gh) & diq010, 
+                                     TRUE,
+                                 high_gh),
+         has_diabetes = (diq010 == 1) | high_gh,
+         # Making the race variable more readable
+         race = case_when(ridreth3 == 1 | ridreth3 == 2 ~ "Hispanic",
+                          ridreth3 == 3 ~ "White",
+                          ridreth3 == 4 ~ "Black",
+                          ridreth3 == 6 ~ "Asian",
+                          ridreth3 == 7 ~ "Other"),
+         # Converting race to factor
+         race = factor(race),
+         # Re-leveling the race factor, so that White is base level (as in paper)
+         race = relevel(race, ref = "White")) %>%
+  # From the paper: In the model, we excluded adults with extreme BMIs-that is, 
+  # less than 15 kg/m2 or greater than 50 kg/m2 (n = 310) %>%
+  filter(bmxbmi > 15,
+         bmxbmi < 50) %>%
+  select(-lbxgh,
+         -high_gh_no_NA,
+         -high_gh,
+         -ridreth3,
+         -diq010) %>%
+  # Making column names more readable
+  rename(id = seqn,
+         age = ridageyr,
+         bmi = bmxbmi)
+
+# Eventually need to revisit (first, locate) the Supplement so that we can see the *exact* model they ended up using
+model <- glm(has_diabetes ~ age + race + bmi, data = regression_data, family = "binomial")
+
+summary(model)
+
+test_data <- data.frame(race = c("White", "Asian", "Black", "Hispanic"), 
+                        age = rep(35, 4), 
+                        bmi = rep(25,4))
+
+model_pred <- predict(model, newdata = test_data, type = "response")
+
+paper_outputs <- c(0.014, 0.038, 0.035, 0.03)
+
+model_comparison <- test_data %>%
+  mutate(model_pred = model_pred,
+         paper_pred = paper_outputs)
