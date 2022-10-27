@@ -1,19 +1,14 @@
-library(haven)
-library(janitor)
 library(dplyr)
 
-# ----- Pulling in *only* 2017-2018 NHANES data for proof of concept ------
-raw_demographics_data <- read_xpt("/home/mcoots/harvard/research/race-in-healthcare/data/DEMO_J.XPT") %>%
-  clean_names()
+data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
 
-raw_survey_responses <- read_xpt("/home/mcoots/harvard/research/race-in-healthcare/data/DIQ_J.XPT") %>% 
-  clean_names()
+raw_demographics_data <- read_csv(paste(data_path, "demographics.csv", sep=""))
 
-raw_body_measurements <- read_xpt("/home/mcoots/harvard/research/race-in-healthcare/data/BMX_J.XPT") %>%
-  clean_names()
+raw_survey_responses <- read_csv(paste(data_path, "survey_responses.csv", sep=""))
 
-raw_glycohemoglobin <- read_xpt("/home/mcoots/harvard/research/race-in-healthcare/data/GHB_J.XPT") %>%
-  clean_names() 
+raw_body_measurements <- read_csv(paste(data_path, "body_measurements.csv", sep=""))
+
+raw_glycohemoglobin <- read_csv(paste(data_path, "glycohemoglobin.csv", sep=""))
 
 # Ignoring weights for the first stab at the regression replication
 cleaned_demographics_data <- raw_demographics_data %>%
