@@ -10,6 +10,8 @@ raw_body_measurements <- read_csv(paste(data_path, "body_measurements.csv", sep=
 
 raw_glycohemoglobin <- read_csv(paste(data_path, "glycohemoglobin.csv", sep=""))
 
+raw_reproductive_health <- read_csv(paste(data_path, "reproductive_health.csv", sep="")) # Ignore parsing errors -- not w/ col. we want
+
 # Ignoring weights for the first stab at the regression replication
 cleaned_demographics_data <- raw_demographics_data %>%
   select(seqn,
@@ -26,6 +28,10 @@ cleaned_body_measurements <- raw_body_measurements %>%
 
 cleaned_glycohemoglobin <- raw_glycohemoglobin %>%
   mutate(high_gh = lbxgh >= 6.5)
+
+cleaned_reproductive_health <- raw_reproductive_health %>%
+  select(seqn,
+         rhd143) # maybe want to do a check at some point to verify response counts posted on NHANES
 
 regression_data <- cleaned_demographics_data %>%
   inner_join(cleaned_survey_responses_data, by = c("seqn")) %>%
