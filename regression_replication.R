@@ -64,7 +64,7 @@ regression_data <- cleaned_demographics_data %>%
   mutate(has_diabetes = diabetes_diagnosis | high_gh)
 
 # Model formula
-formula <- has_diabetes ~ race + 
+formula_1 <- has_diabetes ~ race + 
   age + age2 + age3 + 
   bmi + bmi2 + bmi3 +
   race:age + race:age2 + race:age3 +
@@ -73,9 +73,9 @@ formula <- has_diabetes ~ race +
 
 
 # Eventually need to revisit (first, locate) the Supplement so that we can see the *exact* model they ended up using
-model <- glm(formula, data = regression_data, family = "binomial")
+model_1 <- glm(formula_1, data = regression_data, family = "binomial")
 
-summary(model)
+summary(model_1)
 
 test_data <- data.frame(race = c("White", "Asian", "Black", "Hispanic"), 
                         age = rep(35, 4),
@@ -85,10 +85,26 @@ test_data <- data.frame(race = c("White", "Asian", "Black", "Hispanic"),
          bmi2 = bmi^2,
          bmi3 = bmi^3)
 
-model_pred <- predict(model, newdata = test_data, type = "response")
+model_1_pred <- predict(model_1, newdata = test_data, type = "response")
 
 paper_outputs <- c(0.014, 0.038, 0.035, 0.03)
 
+
+# Model formula
+formula_2 <- has_diabetes ~ race + 
+  age + bmi + bmi2 +
+  race:age + race:bmi + race:bmi2 +
+  age:bmi + race:age:bmi
+
+
+# Eventually need to revisit (first, locate) the Supplement so that we can see the *exact* model they ended up using
+model_2 <- glm(formula_2, data = regression_data, family = "binomial")
+
+summary(model_2)
+
+model_2_pred <- predict(model_2, newdata = test_data, type = "response")
+
 model_comparison <- test_data %>%
-  mutate(model_pred = model_pred,
+  mutate(model_1_pred = model_1_pred,
+         model_2_pred = model_2_pred,
          paper_pred = paper_outputs)
