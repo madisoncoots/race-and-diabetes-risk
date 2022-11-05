@@ -1,4 +1,5 @@
 library(dplyr)
+library(survey)
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
 
@@ -15,13 +16,16 @@ cleaned_demographics_data <- raw_demographics_data %>%
   select(seqn,
          ridageyr,
          ridreth3,
-         ridexprg) %>%
+         ridexprg,
+         wtmec2yr,
+         sdmvpsu,
+         sdmvstra) %>%
   rename(age = ridageyr, 
          race = ridreth3,
          pregnant = ridexprg) %>%
   filter(!is.na(age)) %>% # line 39 of author code
-  filter(age >= 18) %>% # lines 10, 31 of author code
-  filter(age <= 70) %>% # lines 10, 31 of author code
+  # filter(age >= 18) %>% # lines 10, 31 of author code
+  # filter(age <= 70) %>% # lines 10, 31 of author code
   mutate(# Making the race variable more readable
     race = case_when(race == 1 | race == 2 ~ "Hispanic",
                      race == 3 ~ "White",
@@ -32,9 +36,10 @@ cleaned_demographics_data <- raw_demographics_data %>%
     race = factor(race),
     # Re-leveling the race factor, so that White is base level (as in paper)
     race = relevel(race, ref = "White")) %>%
-  filter(pregnant != 1) %>% # line 32 of author code
+  # filter(pregnant != 1 | is.na(pregnant)) %>% # line 32 of author code
   mutate(age2 = age^2, # line 33 of author code
-         age3 = age^3)
+         age3 = age^3) %>%
+  mutate(wtmec8yr = wtmec2yr/4)
   
 cleaned_survey_responses_data <- raw_survey_responses %>%
   select(seqn,
@@ -108,3 +113,20 @@ model_comparison <- test_data %>%
   mutate(model_1_pred = model_1_pred,
          model_2_pred = model_2_pred,
          paper_pred = paper_outputs)
+
+df_survey=svydesign(id = ~sdmvpsu, strata = ~sdmvstra, nest=TRUE,
+                    weights = ~wtmec8yr, data=regression_data)
+
+unwtd.count(~oneperson,df_survey)
+svytotal(~oneperson,df_survey)
+svytotal(~oneperson,subset(df_survey,ridageyr>=12))
+
+df_survey_final=subset(df_survey,(!pregnant==1 |is.na(pregnant)))
+
+
+svyglm(has_diabetes~bmi ,
+       subset(df_survey_final,age>=35 & age<=70 ),family=quasibinomial(log))
+
+summary(svyglm(has_diabetes~race + age + bmi + bmi2 + race:age + race:bmi + race:bmi2 + age:bmi + age:bmi:race,
+               subset(df_survey_final,age>=35 & age<=70 ),family=quasibinomial(log)))
+        
