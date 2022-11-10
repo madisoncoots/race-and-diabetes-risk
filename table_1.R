@@ -43,6 +43,9 @@ table_data <- raw_demographics_data %>%
          diabetes = if_else(a1c=="[6.5,1e+03)" &!is.na(a1c), 1, diabetes)
   )
   
+table_data %>% group_by(race) %>%
+  dplyr::summarize(mean_pct = sum(diabetes * wtmec8yr)/sum(wtmec8yr))
+
 
 NHANES_design <- svydesign(
   data = table_data %>% filter(race != "Other"), 
@@ -104,11 +107,32 @@ svytable(~race + bmxbmi, design = NHANES_design) %>%
   mutate(paper_mean = c(25.1, 30.9, 30.5, 29.2, 29.1)) 
 
 # Row 6 : Diabetes prevalence % by race
-svyby(~diabetes,~race,subset(NHANES_design,age>=18 & age<=70),svymean) %>%
+svyby(~diabetes,~race,NHANES_design,svymean) %>%
   as.data.frame() %>%
   mutate(diabetes = diabetes * 100) %>%
   select(-race) %>%
   mutate(paper_pct = c(11.9, 14.3, 12.8, 10.7, 9.1)) 
+
+svytable(~race + diabetes, design = NHANES_design) %>%
+  as.data.frame() %>%
+  group_by(race) %>%
+  dplyr::summarize(Freq[diabetes==1]/sum(Freq))
+
+  mutate(bmi = as.numeric(as.character((diabetes)))) %>%
+  dplyr::summarize(mean_ = sum(diabetes*Freq/sum(Freq)))
+  
+svytable(~race + diq010 + lbxgh, design = NHANES_design) %>%
+    as.data.frame() %>%
+    mutate(lbxgh = as.numeric(as.character((lbxgh))),
+           a1c = cut(lbxgh,breaks=c(0,5.7,6.5,1000),right=FALSE)) %>%
+    mutate(diabetes_diagnosis = if_else(diq010 == 1, 1, 0),
+           # high_gh = a1c == "[6.5,1e+03)",
+           diabetes = diabetes_diagnosis,
+           diabetes = if_else(a1c == "[6.5,1e+03)" & !is.na(a1c), 1, diabetes)) %>%
+    # diabetes = diabetes_diagnosis | high_gh) %>%
+    group_by(race) %>%
+    summarize(diabetes_pct = sum(diabetes*Freq/sum(Freq))) %>%
+    mutate(diabetes_pct = round(diabetes_pct, 3) * 100)
 
 # Row 7 : Mean AC by race 
 svytable(~race + lbxgh, design = NHANES_design) %>%
