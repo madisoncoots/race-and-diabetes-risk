@@ -381,6 +381,10 @@ test_data <- data.frame(race = c("White American", "Asian American", "Black Amer
 
 predict(final_model, newdata = test_data, type = "response")
 
+save_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/"
+
+saveRDS(final_model, file = paste(save_path, "paper_final_model.rda", sep = ""))
+
 # Table 2
 
 bmi_vector <- c(c(25:19), 18.5)
@@ -408,3 +412,5 @@ table_2_replicated <- data.frame(White_Americans = white_pred,
   `rownames<-`(bmi_vector)
 
 table_2_replicated
+
+# Table 3
