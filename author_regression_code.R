@@ -412,5 +412,3 @@ table_2_replicated <- data.frame(White_Americans = white_pred,
   `rownames<-`(bmi_vector)
 
 table_2_replicated
-
-# Table 3
