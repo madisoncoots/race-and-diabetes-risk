@@ -2,6 +2,7 @@ library(dplyr)
 library(kableExtra)
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
+save_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/"
 
 raw_demographics_data <- read_csv(paste(data_path, "demographics.csv", sep=""))
 raw_survey_responses <- read_csv(paste(data_path, "survey_responses.csv", sep=""))
@@ -13,9 +14,11 @@ regression_data <- raw_demographics_data %>%
   inner_join(raw_survey_responses, by = c("seqn")) %>%
   inner_join(raw_body_measurements, by = c("seqn")) %>%
   inner_join(raw_glycohemoglobin, by = c("seqn")) %>%
-  filter(ridageyr >= 35) %>%
+  filter(ridageyr >= 18) %>% # Taken from Supplement
   filter(ridageyr <= 70) %>%
   filter(ridexprg != 1 | is.na(ridexprg)) %>%
+  filter(bmxbmi >= 18.5, # Taken from Supplement
+         bmxbmi <= 50) %>%
   rename(race = ridreth3) %>%
   mutate(# Making the race variable more readable
     race = case_when(race == 1 ~ "Mexican American",
@@ -42,33 +45,21 @@ regression_data <- raw_demographics_data %>%
   ) %>%
   mutate(normalized_weights = wtmec8yr / sum(wtmec8yr))
 
-# Test models --------------------------
+final_model_formula <- diabetes ~ race + ridageyr + bmxbmi +
+  I(bmxbmi^2) + race:ridageyr + race:bmxbmi +
+  race:I(bmxbmi^2) + ridageyr:bmxbmi + race:ridageyr:bmxbmi
 
-glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "binomial",
-    weights = wtmec8yr/1000)
+final_paper_model <- glm(final_model_formula, 
+                       data = regression_data, 
+                       family = "binomial",
+                       weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
 
-glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "quasibinomial", # glm complains when weights aren't ints
-    weights = wtmec8yr/1000)
+# Save this blessed model
+saveRDS(final_paper_model, file = paste(save_path, "final_paper_model.rda", sep = ""))
 
-glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "binomial",
-    weights = normalized_weights * nrow(regression_data))
-
-#  --------------------------
-
-race_only_model <- glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "binomial",
-    weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
-
-names <- names(coef(race_only_model))
-coef_vals <- coef(race_only_model)
-se <- sqrt(diag(vcovHC(race_only_model, type = "HC0")))
+names <- names(coef(final_paper_model))
+coef_vals <- coef(final_paper_model)
+se <- sqrt(diag(vcovHC(final_paper_model, type = "HC0")))
 
 # For paper 
 
@@ -82,15 +73,6 @@ data.frame(Parameter = names,
         digits = 3,
         vline = "",
         booktabs = T,
-        linesep = c("", "", "", "", "", "", "\\addlinespace")) %>%
+        linesep = c("", "", "", "", "", "\\addlinespace", "")) %>%
   row_spec(0,bold=TRUE)
 
-# This is just non-sensical output
-
-# regression_design <- svydesign(id = ~sdmvpsu, 
-#                                strata = ~sdmvstra, 
-#                                nest=TRUE,
-#                     weights = ~wtmec8yr, 
-#                     data=regression_data)
-# 
-# svyglm(diabetes ~ race, regression_design)
