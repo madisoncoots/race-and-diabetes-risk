@@ -21,12 +21,10 @@ regression_data <- raw_demographics_data %>%
          bmxbmi <= 50) %>%
   rename(race = ridreth3) %>%
   mutate(# Making the race variable more readable
-    race = case_when(race == 1 ~ "Mexican American",
-                     race == 2 ~ "Other Hispanic American",
+    race = case_when(race == 1 | race == 2 ~ "Hispanic American",
                      race == 3 ~ "White American",
                      race == 4 ~ "Black American",
-                     race == 6 ~ "Asian American",
-                     race == 7 ~ "Other"),
+                     race == 6 ~ "Asian American"),
     race = factor(race),
     # Re-leveling the race factor, so that White is base level (as in paper)
     race = relevel(race, ref = "White American")) %>%
