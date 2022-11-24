@@ -1,4 +1,3 @@
-library(survey)
 library(tidyverse)
 
 model_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/final_paper_model.rda"
@@ -38,6 +37,7 @@ table_2_replicated %>%
         vline = "",
         booktabs = T,
         linesep = c("")) %>%
-  row_spec(0,bold=TRUE)
+  row_spec(0,bold=TRUE) %>%
+  add_header_above(c(" " = 1, "Predicted Prevalence (%)" = 4))
 
 

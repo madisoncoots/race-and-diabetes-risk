@@ -1,5 +1,5 @@
 library(dplyr)
-library(survey)
+library(magrittr) # for transposing table 
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
 
@@ -43,13 +43,13 @@ table_data <- raw_demographics_data %>%
   )
 
 # Top Row (Row 1) : Sample counts by race 
-table_data %>% 
+sample_cts_by_race <- table_data %>% 
   count(race) %>% 
   mutate(paper_cts = c(2658, 4597, 2884, 763, 2114, 6319)) 
 
 
 # Row 2: Projected U.S. adults by race (dplyr only)
-table_data %>%
+projected_cts_by_race <- table_data %>%
   filter(race != "Other") %>%
   group_by(race) %>%
   summarize(freq = sum(wtmec8yr)) %>%
@@ -57,7 +57,7 @@ table_data %>%
   
 
 # Row 3 : % Woman by race (dplyr only!)
-table_data %>%
+pct_woman_by_race <- table_data %>%
   filter(race != "Other") %>%
   filter(ridageyr >= 35) %>% # This is a mistake in the author code!!!
   mutate(is_woman = riagendr == 2) %>%
@@ -67,7 +67,7 @@ table_data %>%
 
 
 # Row 4 : Mean age by race (dplyr Only!) 
-table_data %>%
+mean_age_by_race <- table_data %>%
   filter(race != "Other") %>%
   mutate(age = as.numeric(as.character((ridageyr)))) %>%
   group_by(race) %>%
@@ -76,7 +76,7 @@ table_data %>%
 
 
 # Row 5 : Mean BMI by race (dplyr only!)
-table_data %>%
+mean_bmi_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(bmxbmi)) %>% # NEED TO FILTER OUT NA BMI
   mutate(bmi = as.numeric(as.character((bmxbmi)))) %>%
@@ -86,7 +86,7 @@ table_data %>%
 
 
 # Row 6 : Diabetes prevalence % by race (dplyr only)
-table_data %>%
+diabetes_prev_by_race <- table_data %>%
   filter(race != "Other") %>%
   group_by(race) %>%
   summarize(diabetes_prev = sum(diabetes * wtmec8yr) / sum(wtmec8yr) * 100) %>%
@@ -94,7 +94,7 @@ table_data %>%
 
 
 # Row 7 : Mean AC by race (dplyr only!)
-table_data %>%
+mean_ac_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(lbxgh)) %>% # NEED TO FILTER OUT NA LBXGH
   group_by(race) %>%
@@ -104,28 +104,28 @@ table_data %>%
 
 
 # Row 8 : Mean systolic blood pressure by race (dplyr only!)
-table_data %>%
+mean_syst_bp_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(bpxsy1)) %>% # NEED TO FILTER OUT NA BPXSY1
   mutate(bpxsy1 = as.numeric(as.character((bpxsy1)))) %>%
   group_by(race) %>%
-  summarize(mean_bp = sum(bpxsy1 * wtmec8yr)/sum(wtmec8yr)) %>%
-  mutate(mean_bp = round(mean_bp, 1)) %>%
+  summarize(mean_syst_bp = sum(bpxsy1 * wtmec8yr)/sum(wtmec8yr)) %>%
+  mutate(mean_syst_bp = round(mean_syst_bp, 1)) %>%
   mutate(paper_mean = c(118.9, 125.1, 119.5, 119.6, 120.2)) 
 
 
 # Row 9 : Mean diastolic blood pressure by race (dplyr only!)
-table_data %>%
+mean_diast_bp_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(bpxsy1)) %>% # NEED TO FILTER OUT NA BPXSY1
   mutate(bpxdi1 = as.numeric(as.character((bpxdi1)))) %>%
   group_by(race) %>%
-  summarize(mean_bp = sum(bpxdi1 * wtmec8yr)/sum(wtmec8yr)) %>%
+  summarize(mean_diast_bp = sum(bpxdi1 * wtmec8yr)/sum(wtmec8yr)) %>%
   mutate(paper_mean = c(72.4, 72.2, 70.3, 70.2, 71.7))
   
 
 # Row 10 : Mean waist circumference by race (no dplyr)
-table_data %>%
+mean_waist_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(bmxwaist)) %>% # NEED TO FILTER OUT NA BMXWAIST
   mutate(bmxwaist = as.numeric(as.character((bmxwaist)))) %>%
@@ -135,7 +135,7 @@ table_data %>%
 
 
 # Row 11 : Mean total cholesterol (mmol/L) by race (dplyr only)
-table_data %>%
+mean_cholesterol_1_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(lbdtcsi)) %>% # NEED TO FILTER OUT NA LBDTCSI
   mutate(lbdtcsi = as.numeric(as.character((lbdtcsi)))) %>%
@@ -145,7 +145,7 @@ table_data %>%
 
 
 # Row 12 : Mean total cholesterol (mg/dL) by race (no dplyr!)
-table_data %>%
+mean_cholesterol_2_by_race <- table_data %>%
   filter(race != "Other",
          !is.na(lbxtc)) %>% # NEED TO FILTER OUT NA LBXTC
   mutate(lbxtc = as.numeric(as.character((lbxtc)))) %>%
@@ -158,3 +158,77 @@ table_data %>%
 # This other package automatically threw out NA values
 # For a lot of the values in the table. I wonder if that is also
 # what was happening for the regression
+
+# Making table
+sample_cts_by_race %>% # row 1
+  select(-paper_cts) %>%
+  rename("Number in sample" = n) %>%
+  filter(race != "Other") %>%
+  left_join(projected_cts_by_race, by = "race") %>% # row 2
+  select(-paper_cts) %>%
+  mutate(freq = format(freq, nsmall = 0)) %>%
+  rename("Projected U.S. adults, n" = freq) %>%
+  left_join(pct_woman_by_race, by = c("race")) %>% # row 3
+  select(-paper_pct) %>%
+  mutate(pct_woman = format(pct_woman, digits = 3)) %>%
+  rename("Women, %" = pct_woman) %>%
+  left_join(mean_age_by_race, by = c("race")) %>% # row 4
+  select(-paper_mean) %>%
+  mutate(mean_age = format(mean_age, digits = 3)) %>%
+  rename("Mean age, y" = mean_age) %>%
+  left_join(mean_bmi_by_race, by = c("race")) %>% # row 5
+  select(-paper_mean) %>%
+  mutate(mean_bmi = format(mean_bmi, digits = 3)) %>%
+  rename("Mean BMI, kg/m^2" = mean_bmi) %>%
+  left_join(diabetes_prev_by_race, by = c("race")) %>% # row 6
+  select(-paper_pct) %>%
+  mutate(diabetes_prev = format(diabetes_prev, digits = 2)) %>%
+  rename("Diabetes prevalence, %" = diabetes_prev) %>%
+  left_join(mean_ac_by_race, by = c("race")) %>% # row 7
+  select(-paper_mean) %>%
+  mutate(mean_ac = format(mean_ac, digits = 2)) %>%
+  rename("Mean hemoglobin A1c level, %" = mean_ac) %>%
+  left_join(mean_syst_bp_by_race, by = c("race")) %>% # row 8
+  select(-paper_mean) %>%
+  mutate(mean_syst_bp = format(mean_syst_bp, digits = 4)) %>%
+  rename("Mean systolic blood pressure, %" = mean_syst_bp) %>%
+  left_join(mean_diast_bp_by_race, by = c("race")) %>% # row 9
+  select(-paper_mean) %>%
+  mutate(mean_diast_bp = format(mean_diast_bp, digits = 3)) %>%
+  rename("Mean diastolic blood pressure, %" = mean_diast_bp) %>%
+  left_join(mean_waist_by_race, by = c("race")) %>% # row 10
+  select(-paper_mean) %>%
+  mutate(mean_wc = format(mean_wc, digits = 3)) %>%
+  rename("Mean waist circumference, cm" = mean_wc) %>%
+  left_join(mean_cholesterol_1_by_race, by = c("race")) %>% # row 11
+  select(-paper_mean) %>%
+  mutate(mean_lbdtcsi = format(mean_lbdtcsi, digits = 3)) %>%
+  rename("Mean total cholesterol level, mmol/L" = mean_lbdtcsi) %>%
+  left_join(mean_cholesterol_2_by_race, by = c("race")) %>% # row 12
+  select(-paper_mean) %>%
+  mutate(mean_lbxtc = format(mean_lbxtc, digits = 4)) %>%
+  rename("Mean total cholesterol level, mg/dL" = mean_lbxtc) %>%
+  ###
+  data.table::transpose(make.names = 'race', keep.names = 'race') %>%
+  format(scientific = F) %>%
+  rename(characteristic = race) %>% # fixing column name weirdness from transpose
+  select(characteristic, 
+         "White American",
+         "Asian American",
+         "Black American",
+         "Mexican American",
+         "Other Hispanic American") %>%
+  `rownames<-`(c()) %>%
+  kable("latex",
+        col.names = c("Characteristic", "White American", "Asian American", 
+                      "Black American", "Mexican American", "Other Hispanic American"),
+        vline = "",
+        booktabs = T,
+        linesep = c("")) %>%
+  row_spec(0,bold=TRUE) %>%
+  row_spec(c(1:12), hline_after = T) %>%
+  column_spec(1, width = "10em") %>%
+  kable_styling(latex_options = c("scale_down")) 
+
+
+
