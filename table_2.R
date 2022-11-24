@@ -1,7 +1,7 @@
 library(survey)
 library(tidyverse)
 
-model_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/paper_final_model.rda"
+model_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/final_paper_model.rda"
 
 final_model <- readRDS(model_path)
 
@@ -23,11 +23,20 @@ asian_pred <- table_2_pred[9:16]
 black_pred <- table_2_pred[17:24]
 hispanic_pred <- table_2_pred[25:32]
 
-table_2_replicated <- data.frame(White_Americans = white_pred,
+table_2_replicated <- data.frame(bmi_vector,
+                                 White_Americans = white_pred,
                                  Asian_Americans = asian_pred,
                                  Black_Americans = black_pred,
-                                 Hispanic_Americans = hispanic_pred) %>%
-  `rownames<-`(bmi_vector)
+                                 Hispanic_Americans = hispanic_pred)
 
-table_2_replicated
+
+table_2_replicated %>%
+  `rownames<-`(c()) %>%
+  kable("latex",
+        col.names = c("BMI (kg/m^2)", "White American", "Asian American", "Black American", "Hispanic American"),
+        digits = 2,
+        vline = "",
+        booktabs = T,
+        linesep = c("")) %>%
+  row_spec(0,bold=TRUE)
 
