@@ -3,6 +3,7 @@ library(kableExtra)
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
 save_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/"
+roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
 
 raw_demographics_data <- read_csv(paste(data_path, "demographics.csv", sep=""))
 raw_survey_responses <- read_csv(paste(data_path, "survey_responses.csv", sep=""))
@@ -60,7 +61,6 @@ coef_vals <- coef(final_paper_model)
 se <- sqrt(diag(vcovHC(final_paper_model, type = "HC0")))
 
 # For paper 
-
 data.frame(Parameter = names,
            Estimate = coef_vals,
            CI_Low = coef_vals - 1.96 * se,
@@ -73,4 +73,26 @@ data.frame(Parameter = names,
         booktabs = T,
         linesep = c("", "", "", "", "", "\\addlinespace", "")) %>%
   row_spec(0,bold=TRUE)
+
+
+# Model evaluation
+predictions <- round(predict(final_paper_model, newdata = regression_data, type = "response") * 100, 2)
+auc(regression_data$diabetes, predictions)
+
+# ROCR 
+data_for_roc <-
+  regression_data %>%
+  mutate(predictions = predictions) %>%
+  filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
+
+# NOTE: We should move this to a util file eventually
+make_roc_data <- function(labels, scores){
+  labels <- labels[order(scores, decreasing=TRUE)]
+  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
+}
+
+roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
+
+write_csv(roc_data, paste(roc_save_path, "full_paper_model_roc.csv", sep = ""))
+
 

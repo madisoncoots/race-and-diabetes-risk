@@ -2,6 +2,8 @@ library(dplyr)
 library(kableExtra)
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
+save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
+roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
 
 raw_demographics_data <- read_csv(paste(data_path, "demographics.csv", sep=""))
 raw_survey_responses <- read_csv(paste(data_path, "survey_responses.csv", sep=""))
@@ -66,6 +68,8 @@ race_only_model <- glm(diabetes ~ race,
     family = "binomial",
     weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
 
+saveRDS(race_only_model, file = paste(save_path, "race_only_model.rda", sep = ""))
+
 names <- names(coef(race_only_model))
 coef_vals <- coef(race_only_model)
 se <- sqrt(diag(vcovHC(race_only_model, type = "HC0")))
@@ -94,3 +98,26 @@ data.frame(Parameter = names,
 #                     data=regression_data)
 # 
 # svyglm(diabetes ~ race, regression_design)
+
+
+# Model evaluation
+predictions <- round(predict(race_only_model, newdata = regression_data, type = "response") * 100, 2)
+auc(regression_data$diabetes, predictions)
+
+
+# ROCR 
+data_for_roc <-
+  regression_data %>%
+  mutate(predictions = predictions) %>%
+  filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
+
+# NOTE: We should move this to a util file eventually
+make_roc_data <- function(labels, scores){
+  labels <- labels[order(scores, decreasing=TRUE)]
+  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
+}
+
+roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
+
+write_csv(roc_data, paste(roc_save_path, "race_only_roc.csv", sep = ""))
+

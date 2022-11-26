@@ -93,7 +93,7 @@ raw_glycohemoglobin_all <- bind_rows(
   raw_glycohemoglobin_17_18
 )
 
-output_path_string <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
+output_path_string <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data"
 
 write_csv(raw_demographics_all, paste(output_path_string, "demographics.csv", sep=""))
 write_csv(raw_survey_responses_all, paste(output_path_string, "survey_responses.csv", sep=""))

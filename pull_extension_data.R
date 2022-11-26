@@ -55,7 +55,7 @@ raw_food_insec_all <- bind_rows(
 
 
 
-output_path_string <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
+output_path_string <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data"
 
 write_csv(raw_health_ins_all, paste(output_path_string, "health_insurance.csv", sep=""))
 write_csv(raw_food_insec_all, paste(output_path_string, "food_insecurity.csv", sep=""))

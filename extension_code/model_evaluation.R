@@ -1,7 +1,8 @@
 library(dplyr)
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
-model_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/final_paper_model.rda"
+# model_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/final_paper_model.rda"
+model_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/final_paper_model.rda"
 
 # Read in regression data -------------------------------------------------------------------
 
@@ -58,4 +59,22 @@ regression_data %>%
          screening_decision = predicted_risk >= threshold) %>%
   filter(!is.na(screening_decision)) %>% # some rows were missing race
   count(diabetes, screening_decision)
-  
+
+# Implementing the race-based thresholds on BMI
+race_based_screening_decisions <- 
+  regression_data %>%
+  filter(ridageyr >= 35) %>% 
+  select(seqn, race, diabetes, ridageyr, bmxbmi) %>%
+  mutate(screen = case_when(
+    race == "Hispanic American" & bmxbmi >= 18.5 ~ TRUE,
+    race == "Black American" & bmxbmi >= 18.5 ~ TRUE,
+    race == "Asian American" & bmxbmi >= 20 ~ TRUE,
+    race == "White American" & bmxbmi >= 25 ~ TRUE,
+    TRUE ~ FALSE)
+    )
+
+# Model evaluation
+auc(regression_data$diabetes, predictions)
+
+# Race-based screening rule evaluation
+auc(race_based_screening_decisions$diabetes, race_based_screening_decisions$screen)
