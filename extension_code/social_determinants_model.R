@@ -1,7 +1,7 @@
 library(dplyr)
 library(pROC) # for computing AUC
 
-data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data"
+data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/"
 save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
 roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
 
