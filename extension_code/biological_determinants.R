@@ -1,5 +1,6 @@
 library(dplyr)
 library(pROC) # for computing AUC
+library(MASS) # for stepwise regression
 
 data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/"
 save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
@@ -73,18 +74,35 @@ regression_data <- raw_demographics_data %>%
   ) %>%
   mutate(normalized_weights = wtmec8yr / sum(wtmec8yr))
 
+regression_data_no_na <- # need to drop NA's for the stepwise regression function
+  regression_data %>%
+  filter(!is.na(diabetes),
+         !is.na(ridageyr),
+         !is.na(bmxbmi),
+         !is.na(gender),
+         !is.na(pad660),
+         !is.na(pad615),
+         !is.na(whd140),
+         !is.na(bmxwt),
+         !is.na(bmxht),
+         !is.na(bmxwaist),
+         !is.na(increased_diabetes_risk),
+         !is.na(relatives_had_diabetes),
+         !is.na(felt_depressed),
+         !is.na(feels_at_risk_diabetes))
 
 biological_determinants_formula <- diabetes ~ ridageyr + bmxbmi + gender +
-  pad660 + pad615 + increased_diabetes_risk + relatives_had_diabetes + felt_depressed + feels_at_risk_diabetes + whd140 + bmxwt +
-  bmxht + bmxwaist
+  pad660 + pad615 + whd140 + bmxwt + bmxht + bmxwaist + 
+  increased_diabetes_risk + relatives_had_diabetes + felt_depressed + feels_at_risk_diabetes
 
 biological_determinants_model <- glm(biological_determinants_formula, 
-                         data = regression_data, 
+                         data = regression_data_no_na, 
                          family = "binomial",
                          weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
 
-
 summary(biological_determinants_model)
+
+saveRDS(biological_determinants_model, file = paste(save_path, "biological_determinants_model.rda", sep = ""))
 
 # Biological characteristics -----
 # RIAGENDR gender (in demo)
@@ -102,12 +120,12 @@ summary(biological_determinants_model)
 
 
 # Model evaluation
-predictions <- round(predict(biological_determinants_model, newdata = regression_data, type = "response") * 100, 2)
-auc(regression_data$diabetes, predictions)
+predictions <- round(predict(biological_determinants_model, newdata = regression_data_no_na, type = "response") * 100, 2)
+auc(regression_data_no_na$diabetes, predictions)
 
 # ROCR 
 data_for_roc <-
-  regression_data %>%
+  regression_data_no_na %>%
   mutate(predictions = predictions) %>%
   filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
 
@@ -121,7 +139,23 @@ roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
 
 write_csv(roc_data, paste(roc_save_path, "biological_determinants_model_roc.csv", sep = ""))
 
+# ------------------- Stepwise version! -----------------------------
+step_biological_determinants_model <- stepAIC(biological_determinants_model, 
+                                              trace = FALSE)
 
+summary(step_biological_determinants_model)
 
+# Model evaluation
+predictions <- round(predict(step_biological_determinants_model, newdata = regression_data_no_na, type = "response") * 100, 2)
+auc(regression_data_no_na$diabetes, predictions)
 
+# ROCR 
+data_for_roc <-
+  regression_data_no_na %>%
+  mutate(predictions = predictions) %>%
+  filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
+
+roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
+
+write_csv(roc_data, paste(roc_save_path, "stepwise_biological_determinants_model_roc.csv", sep = ""))
 

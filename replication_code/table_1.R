@@ -1,5 +1,7 @@
 library(dplyr)
 library(magrittr) # for transposing table 
+library(kableExtra)
+library(readr)
 
 data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
 
