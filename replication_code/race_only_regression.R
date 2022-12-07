@@ -1,7 +1,11 @@
 library(dplyr)
+library(sandwich)
 library(kableExtra)
 
-data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
+setwd("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/extension_code")
+source("utils.R")
+
+data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/"
 save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
 roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
 
@@ -9,7 +13,6 @@ raw_demographics_data <- read_csv(paste(data_path, "demographics.csv", sep=""))
 raw_survey_responses <- read_csv(paste(data_path, "survey_responses.csv", sep=""))
 raw_body_measurements <- read_csv(paste(data_path, "body_measurements.csv", sep=""))
 raw_glycohemoglobin <- read_csv(paste(data_path, "glycohemoglobin.csv", sep=""))
-
 
 regression_data <- raw_demographics_data %>%
   inner_join(raw_survey_responses, by = c("seqn")) %>%
@@ -20,12 +23,10 @@ regression_data <- raw_demographics_data %>%
   filter(ridexprg != 1 | is.na(ridexprg)) %>%
   rename(race = ridreth3) %>%
   mutate(# Making the race variable more readable
-    race = case_when(race == 1 ~ "Mexican American",
-                     race == 2 ~ "Other Hispanic American",
+    race = case_when(race == 1 | race == 2 ~ "Hispanic American",
                      race == 3 ~ "White American",
                      race == 4 ~ "Black American",
-                     race == 6 ~ "Asian American",
-                     race == 7 ~ "Other"),
+                     race == 6 ~ "Asian American"),
     race = factor(race),
     # Re-leveling the race factor, so that White is base level (as in paper)
     race = relevel(race, ref = "White American")) %>%
@@ -43,25 +44,6 @@ regression_data <- raw_demographics_data %>%
          diabetes = if_else(diabetes == 1, TRUE, FALSE)
   ) %>%
   mutate(normalized_weights = wtmec8yr / sum(wtmec8yr))
-
-# Test models --------------------------
-
-glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "binomial",
-    weights = wtmec8yr/1000)
-
-glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "quasibinomial", # glm complains when weights aren't ints
-    weights = wtmec8yr/1000)
-
-glm(diabetes ~ race, 
-    data = regression_data, 
-    family = "binomial",
-    weights = normalized_weights * nrow(regression_data))
-
-#  --------------------------
 
 race_only_model <- glm(diabetes ~ race, 
     data = regression_data, 
@@ -102,20 +84,15 @@ data.frame(Parameter = names,
 
 # Model evaluation
 predictions <- round(predict(race_only_model, newdata = regression_data, type = "response") * 100, 2)
-auc(regression_data$diabetes, predictions)
 
+compute_auc(race_only_model, regression_data)
+compute_auc_by_race(race_only_model, regression_data)
 
 # ROCR 
 data_for_roc <-
   regression_data %>%
   mutate(predictions = predictions) %>%
   filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
-
-# NOTE: We should move this to a util file eventually
-make_roc_data <- function(labels, scores){
-  labels <- labels[order(scores, decreasing=TRUE)]
-  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
-}
 
 roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
 

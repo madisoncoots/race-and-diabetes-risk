@@ -1,8 +1,15 @@
 library(dplyr)
+library(sandwich)
 library(kableExtra)
 
-data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
-save_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/"
+setwd("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/extension_code")
+source("utils.R")
+
+# data_path <- "/home/mcoots/harvard/research/race-in-healthcare/data/parsed/"
+# save_path <- "/home/mcoots/harvard/research/race-in-healthcare/models/"
+data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/"
+save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
+
 roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
 
 raw_demographics_data <- read_csv(paste(data_path, "demographics.csv", sep=""))
@@ -77,19 +84,15 @@ data.frame(Parameter = names,
 
 # Model evaluation
 predictions <- round(predict(final_paper_model, newdata = regression_data, type = "response") * 100, 2)
-auc(regression_data$diabetes, predictions)
+
+compute_auc(final_paper_model, regression_data)
+compute_auc_by_race(final_paper_model, regression_data)
 
 # ROCR 
 data_for_roc <-
   regression_data %>%
   mutate(predictions = predictions) %>%
   filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
-
-# NOTE: We should move this to a util file eventually
-make_roc_data <- function(labels, scores){
-  labels <- labels[order(scores, decreasing=TRUE)]
-  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
-}
 
 roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
 

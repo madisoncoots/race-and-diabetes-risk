@@ -2,6 +2,9 @@ library(dplyr)
 library(pROC) # for computing AUC
 library(MASS) # for stepwise regression
 
+setwd("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/extension_code")
+source("utils.R")
+
 data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/"
 save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
 roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
@@ -121,19 +124,16 @@ saveRDS(biological_determinants_model, file = paste(save_path, "biological_deter
 
 # Model evaluation
 predictions <- round(predict(biological_determinants_model, newdata = regression_data_no_na, type = "response") * 100, 2)
-auc(regression_data_no_na$diabetes, predictions)
+
+compute_auc(biological_determinants_model, regression_data_no_na)
+
+compute_auc_by_race(biological_determinants_model, regression_data_no_na)
 
 # ROCR 
 data_for_roc <-
   regression_data_no_na %>%
   mutate(predictions = predictions) %>%
   filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
-
-# NOTE: We should move this to a util file eventually
-make_roc_data <- function(labels, scores){
-  labels <- labels[order(scores, decreasing=TRUE)]
-  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
-}
 
 roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
 
@@ -147,7 +147,9 @@ summary(step_biological_determinants_model)
 
 # Model evaluation
 predictions <- round(predict(step_biological_determinants_model, newdata = regression_data_no_na, type = "response") * 100, 2)
-auc(regression_data_no_na$diabetes, predictions)
+
+compute_auc(step_biological_determinants_model, regression_data_no_na)
+compute_auc_by_race(step_biological_determinants_model, regression_data_no_na)
 
 # ROCR 
 data_for_roc <-

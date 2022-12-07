@@ -2,13 +2,13 @@ library(ggplot2)
 
 roc_read_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
 
-social_determinants_path <- paste(roc_save_path, "social_determinants_roc.csv", sep = "")
-biological_determinants_path <- paste(roc_save_path, "biological_determinants_model_roc.csv", sep = "")
-race_only_path <- paste(roc_save_path, "race_only_roc.csv", sep = "")
-full_paper_path <- paste(roc_save_path, "full_paper_model_roc.csv", sep = "")
-age_and_bmi_path <- paste(roc_save_path, "age_and_bmi_model_roc.csv", sep = "")
-social_determinants_with_race_path <- paste(roc_save_path, "social_determinants_with_race_roc.csv", sep = "")
-stepwise_bio_determinants_path <- paste(roc_save_path, "stepwise_biological_determinants_model_roc.csv", sep = "")
+social_determinants_path <- paste(roc_read_path, "social_determinants_roc.csv", sep = "")
+biological_determinants_path <- paste(roc_read_path, "biological_determinants_model_roc.csv", sep = "")
+race_only_path <- paste(roc_read_path, "race_only_roc.csv", sep = "")
+full_paper_path <- paste(roc_read_path, "full_paper_model_roc.csv", sep = "")
+age_and_bmi_path <- paste(roc_read_path, "age_and_bmi_model_roc.csv", sep = "")
+social_determinants_with_race_path <- paste(roc_read_path, "social_determinants_with_race_roc.csv", sep = "")
+stepwise_bio_determinants_path <- paste(roc_read_path, "stepwise_biological_determinants_model_roc.csv", sep = "")
 
 social_determinants_roc <- read_csv(social_determinants_path)
 biological_determinants_roc <- read_csv(biological_determinants_path)

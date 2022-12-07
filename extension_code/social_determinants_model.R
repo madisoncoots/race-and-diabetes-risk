@@ -1,6 +1,9 @@
 library(dplyr)
 library(pROC) # for computing AUC
 
+setwd("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/extension_code")
+source("utils.R")
+
 data_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/"
 save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/"
 roc_save_path <- "/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/model_roc_data/"
@@ -105,8 +108,6 @@ regression_data <- raw_demographics_data %>%
 
 social_determinants_model_formula <- diabetes ~ ridageyr + bmxbmi + income + health_insurance + educ + food_security
 
-
-
 social_determinants_model <- glm(social_determinants_model_formula, 
                          data = regression_data, 
                          family = "binomial",
@@ -119,19 +120,15 @@ saveRDS(social_determinants_model, file = paste(save_path, "social_determinants_
 
 # Model evaluation
 predictions <- round(predict(social_determinants_model, newdata = regression_data, type = "response") * 100, 2)
-auc(regression_data$diabetes, predictions)
+
+compute_auc(age_and_bmi_model, regression_data)
+compute_auc_by_race(age_and_bmi_model, regression_data)
 
 # ROCR 
 data_for_roc <-
   regression_data %>%
   mutate(predictions = predictions) %>%
   filter(!is.na(predictions)) # Need this step to drop NA predictions from the ROC
-
-# NOTE: We should move this to a util file eventually
-make_roc_data <- function(labels, scores){
-  labels <- labels[order(scores, decreasing=TRUE)]
-  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
-}
 
 roc_data <- make_roc_data(data_for_roc$diabetes, data_for_roc$predictions)
 
