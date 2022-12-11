@@ -38,9 +38,36 @@ error_robust_auc <- function(labels, predictions) {
   return(out)
 }
 
-
 make_roc_data <- function(labels, scores){
   labels <- labels[order(scores, decreasing=TRUE)]
   data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), scores[order(scores, decreasing=TRUE)], labels)
 }
+
+make_roc_by_race_data <- function(model, data){
+  predictions <- round(predict(model, newdata = data, type = "response") * 100, 2)
+  data <- data %>% 
+    mutate(predictions = predictions)
+  white <- data %>% 
+    filter(race == "White American",
+           !is.na(predictions)) # Need this step to drop NA predictions from the ROC)
+  black <- data %>% 
+    filter(race == "Black American",
+           !is.na(predictions))
+  asian <- data %>% 
+    filter(race == "Asian American",
+           !is.na(predictions))
+  hispanic <- data %>% 
+    filter(race == "Hispanic American",
+           !is.na(predictions))
+  white_roc <- make_roc_data(white$diabetes, white$predictions) %>%
+    mutate(race = "White American")
+  black_roc <- make_roc_data(black$diabetes, black$predictions) %>%
+    mutate(race = "Black American")
+  asian_roc <- make_roc_data(asian$diabetes, asian$predictions) %>%
+    mutate(race = "Asian American")
+  hispanic_roc <- make_roc_data(hispanic$diabetes, hispanic$predictions) %>%
+    mutate(race = "Hispanic American")
+  return(rbind(white_roc, black_roc, asian_roc, hispanic_roc))
+}
+
 
