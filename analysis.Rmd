@@ -1,0 +1,79 @@
+---
+title: Diabetes Risk Assessment Models
+author: "Coots."
+date: "January 10, 2023"
+output:
+  github_document:
+    pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/extension_code/utils.R")
+data <- readRDS("/Users/madisoncoots/Documents/harvard/research/race-diabetes/data/data.rds")
+```
+
+## Aggarwal et al. (2022) model 
+
+```{r cars}
+aggarwal_model_formula <- diabetes ~ race + ridageyr + bmxbmi +
+  I(bmxbmi^2) + race:ridageyr + race:bmxbmi +
+  race:I(bmxbmi^2) + ridageyr:bmxbmi + race:ridageyr:bmxbmi
+
+aggarwal_model <- glm(aggarwal_model_formula, 
+                         data = data, 
+                         family = "binomial",
+                         weights = round(wtmec8yr/1000))
+
+summary(aggarwal_model)
+
+summary(readRDS("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/final_paper_model.rda"))
+```
+
+## Age and BMI model
+```{r}
+age_and_bmi_formula <- diabetes ~ ridageyr + bmxbmi 
+
+age_and_bmi_model <- glm(age_and_bmi_formula, 
+                         data = data, 
+                         family = "binomial",
+                         weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
+
+summary(age_and_bmi_model)
+summary(readRDS("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/age_and_bmi_model.rda"))
+```
+
+## Social determinants model 
+```{r}
+social_determinants_model_formula <- diabetes ~ ridageyr + bmxbmi + income + health_insurance + educ + food_security
+
+social_determinants_model <- glm(social_determinants_model_formula, 
+                         data = data, 
+                         family = "binomial",
+                         weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
+
+summary(social_determinants_model)
+
+summary(readRDS("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/social_determinants_model.rda"))
+```
+
+
+## Biological determinants model 
+```{r}
+biological_determinants_formula <- diabetes ~ ridageyr + bmxbmi + gender +
+  pad660 + pad615 + whd140 + bmxwt + bmxht + bmxwaist + 
+  increased_diabetes_risk + relatives_had_diabetes + felt_depressed + feels_at_risk_diabetes
+
+biological_determinants_model <- glm(biological_determinants_formula, 
+                         data = data, 
+                         family = "binomial",
+                         weights = round(wtmec8yr/1000)) # glm complains when weights aren't ints
+
+summary(biological_determinants_model)
+
+summary(readRDS("/Users/madisoncoots/Documents/harvard/research/race-diabetes/race-and-diabetes-risk/models/biological_determinants_model.rda"))
+
+```
